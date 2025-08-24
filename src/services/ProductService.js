@@ -79,22 +79,55 @@ const deleteProduct = (id) => {
         message: "Delete product success",
       });
     } catch (e) {
-      console.log('e', e)
+      console.log("e", e);
       reject(e);
     }
   });
 };
 
-const getAllProducts = () => {
+const getAllProducts = (
+  limit = 10,
+  page = 1,
+  sortField,
+  sortValue,
+  filterField,
+  filterValue
+) => {
   return new Promise(async (resolve, reject) => {
     try {
-      const allProducts = await Product.find();
+      if (page - 1 < 0) {
+        resolve({
+          status: "ERROR",
+          message: "Page must start from 1",
+        });
+      }
+      const totalProducts = await Product.countDocuments();
+      let allProducts;
+      if (filterField) {
+        allProducts = await Product.find({
+          [filterField]: { $regex: filterValue },
+        });
+      } else if (sortField) {
+        const objSort = { [sortField]: sortValue };
+        allProducts = await Product.find()
+          .limit(limit)
+          .skip((page - 1) * limit)
+          .sort(objSort);
+      } else {
+        allProducts = await Product.find()
+          .limit(limit)
+          .skip((page - 1) * limit);
+      }
       resolve({
         status: "OK",
         message: "SUCCESS",
         data: allProducts,
+        total: totalProducts,
+        currentPage: Number(page),
+        totalPages: Math.ceil(totalProducts / limit),
       });
     } catch (e) {
+      console.log(e);
       reject(e);
     }
   });
